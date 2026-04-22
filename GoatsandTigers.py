@@ -2,10 +2,12 @@
 This Implementation of Goats and Tigers game
 Author: Sravya Adapa (nadapa2)
 """
+from platform import node
+
 import networkx as nx
 import matplotlib.pyplot as plt
 from enum import Enum
-
+from networkx.classes import is_empty, neighbors
 from shapely.predicates import is_valid
 from webcolors import names
 
@@ -101,7 +103,6 @@ class Board():
                 color_map.append("green")
             else:
                 color_map.append("lightgray")
-
         nx.draw(
             self.G,
             self.positions,
@@ -121,9 +122,9 @@ class Player():
     Piece type( Tiger, Goat)
     """
     def __init__(self,name, piece_type: PieceType):
-        self.name = names
+        self.name = name
         self.piece_type = PieceType
-    def move(self, board):
+    def get_move(self, board):
         raise NotImplementedError()
 
 class AIPlayer(Player):
@@ -135,15 +136,40 @@ class AIPlayer(Player):
 
 class HumanPlayer(Player):
     """Human Player"""
-    def get_move(self, board):
-        pass
+    def get_move(self, board, goats_to_place):
+        while True:
+            if self.piece_type == PieceType.GOAT and goats_to_place > 0:
+                move_type = "place"
+                move = input(f"{self.name} place goat on board. Enter node: ")
+                node = int(move)
+                # if not is_valid(self.piece_type,move_type,node):
+                #     raise ValueError("Invalid Value")
+                return (move_type, node)
+            else:
+                move_type = "move"
+                move = input(f"move your {self.piece_type} n"
+                             f"\nEnter source node and destination node: ")
+                source, destination = map(int, move.split(" "))
+                # if not is_valid(self.piece_type, move_type, source, destination):
+                #     raise ValueError("Invalid Value")
+                return (move_type, source, destination)
+
 
 class Game():
     def __init__(self):
         self.board = Board()
-        self.player1 = Player()
-        self.player2 = Player()
+        self.players = [HumanPlayer("Goat Player", PieceType.GOAT),
+                        HumanPlayer("Tiger Player", PieceType.TIGER)]
         self.index = 0
+        self.goats_to_place = 15
+        self.goats_captured = 0
+        self.tigers_blocked = 0
+        self.initialize_tigers()
+
+    def initialize_tigers(self):
+        nodes = [1,3,4]
+        for node in nodes:
+            self.board.set_value(node, "T")
 
     def switch_player(self):
         self.index = 1 - self.index
@@ -152,23 +178,59 @@ class Game():
         return self.players[self.index]
 
     def is_game_over(self, board):
+        if self.goats_captured == 15:
+            print("Tigers Wins")
+            return True
+        elif self.tigers_blocked == 3:
+            print("Goats Win")
+            return True
+        return False
+
+    # def is_valid(self, move,board):
+    #     pass
+
+    def apply_move(self, move):
+        player = self.get_current_player()
+        if move[0] == "place":
+            _, node = move
+            self.board.set_value(node, "G")
+            self.goats_to_place -= 1
+        elif move[0] == "move":
+            _, source, destination = move
+            piece = player.piece_type
+            if piece == "T" and destination not in self.board.get_neighbors(source):
+                self.capture(source, destination)
+            self.board.set_value(destination, piece)
+            self.board.set_value(source, None)
+        if self.is_tiger_blocked(board):
+            self.tigers_blocked += 1
+
+    def is_tiger_blocked(self, board):
         pass
-    def is_valid(self, move,board):
-        pass
-    def apply_move(self, move, board):
-        pass
+
+    def capture(self, source, destination):
+        src_pos = self.board.get_position(source)
+        dst_pos = self.board.get_position(destination)
+        mid = ((src_pos[0] + dst_pos[0]) / 2,
+               (src_pos[1] + dst_pos[1]) / 2)
+        for node in self.board.G.nodes:
+            if self.board.get_position(node) == mid:
+                self.board.set_value(node, None)
+                self.goats_captured += 1
+
     def game(self):
         while not self.is_game_over(self.board):
             player = self.get_current_player()
             move = player.get_move(self.board)
-            if is_valid(move,board):
-                self.apply_move(move, board)
-                self.board.draw()
+            while True:
+                move = player.get_move(board, self.goats_to_place)
+                if self.board.is_valid(move, player.piece_type, self.goats_to_place):
+                    break
+                else:
+                    print("Invalid move. Try again.")
+            self.apply_move(move, self.board)
+            # self.board.draw()
             self.switch_player()
-
-
-
-
 
 if __name__ == '__main__':
     board = Board()
