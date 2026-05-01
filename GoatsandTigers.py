@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from enum import Enum
 import copy
 from collections import deque
+import random
+
+from sympy import capture
 
 # These are helpful to detect any repeated moves in the game
 MAX_CYCLE_LEN  = 4
@@ -358,7 +361,7 @@ class Game():
                 return False
             if self.board.get_value(source) != piece_type.value:
                 return False
-            neighbours = self.board.get_neighbors(source)
+            neighbours = self.board.get_neighbors(source) #O(k)
             if piece_type == PieceType.GOAT:
                 return self.goats_to_place == 0 and destination in neighbours
             elif piece_type == PieceType.TIGER:
@@ -373,10 +376,10 @@ class Game():
             _, zone_key, _cw = move
             if zone_key not in ROTATION_ZONES:
                 return False
-            if zone_key == self.last_rotated_zone:  # new rule
+            if zone_key == self.last_rotated_zone:
                 return False
             grid = ROTATION_ZONES[zone_key]["perimeter"]
-            return any(self.board.get_value(n) == piece_type.value for n in grid)
+            return any(self.board.get_value(n) == piece_type.value for n in grid) #O(k)
         return False
 
     def is_valid_tiger_jump(self, source, destination):
@@ -525,8 +528,8 @@ class AIPlayer(Player):
 def is_cycle(history: deque, min_repeats: int = 2, max_cycle: int = MAX_CYCLE_LEN):
     """
     To idenify if the players stuck in a loop.
-    1. It takes the each player moves history and checks if they are making same moves again and again
-    2. If there 2 cycles of same move for both players then considers they are stuck.
+    1. It takes each player moves history and checks if they are making same moves again and again
+    2. If there are 2 cycles of same move for both players then considers they are stuck.
     """
     h = list(history)
     n = len(h)
@@ -547,40 +550,34 @@ def get_all_moves(game: "Game", piece_type: PieceType):
     return: List of all possible moves
     """
     moves = []
-
-    # if piece_type == PieceType.TIGER:
-    #     for node in game.board.G.nodes:
-    #         if game.board.is_empty(node):
-    #             moves.append(("place", node))
-    #     return moves
-
+    capture_moves = []
     if piece_type == PieceType.GOAT and game.goats_to_place > 0:
-        for node in game.board.G.nodes:
-            if game.board.is_empty(node):
+        for node in game.board.G.nodes: # O(N)
+            if game.board.is_empty(node): # O(1)
                 moves.append(("place", node))
         return moves
 
-    for node in game.board.G.nodes:
+    for node in game.board.G.nodes: # O(N)
         if game.board.get_value(node) == piece_type.value:
-            for nb in game.board.get_neighbors(node):
+            for nb in game.board.get_neighbors(node): #O(k) k =2-4
                 move = ("move", node, nb)
-                if game.is_valid(move, piece_type):
+                if game.is_valid(move, piece_type): # # O(k) k can be considered constant
                     moves.append(move)
-
             if piece_type == PieceType.TIGER:
-                for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items():
-                    if (game.board.get_value(mid_node) == "G"
-                            and game.board.is_empty(landing)):
+                for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items(): #O(k) valid jumps is constant
+                    if (game.board.get_value(mid_node) == "G" and game.board.is_empty(landing)):
                         move = ("move", node, landing)
-                        if game.is_valid(move, piece_type):
-                            moves.append(move)
+                        if game.is_valid(move, piece_type): # O(k) k can be considered constant
+                            #moves.append(move)
+                            capture_moves.append(move)
+    if piece_type == PieceType.TIGER and capture_moves:
+        return capture_moves
     if game.game_type == "rotation" and game.goats_to_place == 0:
-        for zone_key in ROTATION_ZONES:
+        for zone_key in ROTATION_ZONES: #O(k) rotation zones are constant
             if zone_key == game.last_rotated_zone:
                 continue
             moves.append(("rotate", zone_key, True))
             moves.append(("rotate", zone_key, False))
-
     return moves
 
 
@@ -594,13 +591,13 @@ def evaluate(game: "Game", perspective: PieceType):
         return 10000 if perspective == PieceType.TIGER else -10000
     # a draw scenario
     if game.is_draw():
-        return -300
+        return -500
     # game over scenario for tigers ( when all the tigers are blocked)
     if game.is_tiger_blocked():
         return 10000 if perspective == PieceType.GOAT else -10000
 
     # a positive incentive when goats are captured
-    score = game.goats_captured * 800
+    score = game.goats_captured * 2000
     score += len(get_all_moves(game, PieceType.TIGER)) * 10
     score -= len(get_all_moves(game, PieceType.GOAT))  * 5
 
@@ -611,19 +608,12 @@ def evaluate(game: "Game", perspective: PieceType):
 
     for node in game.board.G.nodes:
         if game.board.get_value(node) == "T":
-            for nb in game.board.get_neighbors(node):
-                nb_pos = game.board.get_position(nb)
-                node_pos = game.board.get_position(node)
-                land_pos = (2 * nb_pos[0] - node_pos[0], 2 * nb_pos[1] - node_pos[1])
-                for candidate in game.board.G.nodes:
-                    if game.board.get_position(candidate) == land_pos:
-                        if game.board.is_empty(candidate):
-                            score += 30
-                        if (game.board.get_value(nb) == "G"
-                                and game.board.is_empty(candidate)):
-                            score += 150
-                        break
-
+            for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items():
+                if game.board.is_empty(landing):
+                    score += 30  # open corridor
+                if (game.board.get_value(mid_node) == "G"
+                        and game.board.is_empty(landing)):
+                    score += 300
     if perspective == PieceType.GOAT:
         score = -score
     return score
@@ -640,21 +630,61 @@ def minimax(game: "Game", depth: int, alpha: int, beta: int,
     if not moves:
         return evaluate(game, perspective), None
     opponent = PieceType.GOAT if perspective == PieceType.TIGER else PieceType.TIGER
-    best_score, best_move = float("-inf"), None
+    best_score = float("-inf")
+    best_moves =  []
     for move in moves:
         sim = game.clone()
         sim.apply_move(move, perspective)
         score, _ = minimax(sim, depth - 1, -beta, -alpha, opponent)
         score = -score
         if score > best_score:
-            best_score, best_move = score, move
+            best_score = score
+            best_moves = [move]
+        elif score == best_score:
+            best_moves.append(move)
+
         alpha = max(alpha, best_score)
         if alpha >= beta:
             break
-    return best_score, best_move
+    return best_score, random.choice(best_moves)
+
+def simulate_games(num_games=50):
+    tiger_wins = 0
+    goat_wins = 0
+    draws = 0
+
+    for i in range(num_games):
+        game = Game(game_type="original")
+        game.players = [
+            AIPlayer("Tiger AI", PieceType.TIGER, depth=3),
+            AIPlayer("Goat AI", PieceType.GOAT, depth=3),
+        ]
+        turns = 0
+        while not game.is_game_over():
+            player = game.get_current_player()
+            move = player.get_move(game, game.goats_to_place)
+            if move is None or not game.is_valid(move, player.piece_type):
+                break
+            game.apply_move(move, player.piece_type)
+            game.switch_player()
+            turns += 1
+
+        if game.goats_captured >= 5:
+            tiger_wins += 1
+        elif game.is_tiger_blocked():
+            goat_wins += 1
+        else:
+            draws += 1
+
+    print("\n===== Simulation Results =====")
+    print(f"Total games : {num_games}")
+    print(f"Tiger wins  : {tiger_wins}  ({100 * tiger_wins / num_games:.0f}%)")
+    print(f"Goat wins   : {goat_wins}   ({100 * goat_wins / num_games:.0f}%)")
+    print(f"Draws       : {draws}        ({100 * draws / num_games:.0f}%)")
 
 
 if __name__ == '__main__':
     #game = Game(game_type="original")
-    game = Game(game_type="rotation")
-    game.game()
+    # game = Game(game_type="rotation")
+    # game.game()
+    simulate_games(1)
