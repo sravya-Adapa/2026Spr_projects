@@ -35,18 +35,16 @@ The game is modeled using a graph-based board representation and uses the **Mini
 - The board is represented as a **graph (NetworkX)**:
   - Nodes → positions on the board
   - Edges → valid moves between positions
+Graph data structure here provides a great advantage to create the board, change and track the game state. 
 
 ### 2. Move Generation (`get_all_moves`)
 This function generates all valid moves for a player given the current game state.
 #### Complexity:
-
-**Time Complexity:**
-
+<img width="669" height="566" alt="image" src="https://github.com/user-attachments/assets/8b81491d-6856-4eeb-9a9f-7d2eacc41f13" />
+Here the overall time complexity can be considered as O(N)
 
 ### 3. Evaluation Function (`evaluate`)
-
 The heuristic function evaluates how good a game state is.
-
 #### Factors:
 - Number of goats captured
 - Mobility (available moves)
@@ -54,6 +52,7 @@ The heuristic function evaluates how good a game state is.
 - Capture opportunities
 
 #### Complexity:
+
 
 ### 4. Negamax with Alpha-Beta Pruning
 
