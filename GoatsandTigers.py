@@ -21,7 +21,7 @@ HISTORY_MAXLEN = MAX_CYCLE_LEN * 2
 
 def original_layout():
     """
-    The orinal board shape for this game defines by nodes and edges.
+    The original board shape for this game defines by nodes and edges.
     """
     nodes = {
         0: (0, 4),
@@ -56,7 +56,6 @@ ROTATION_ZONES = {
     "T1": {"name": "▲ 0-2-3", "perimeter": [0, 3, 2]},
     "T2": {"name": "▲ 0-3-4", "perimeter": [0, 4, 3]},
     "T3": {"name": "▲ 0-4-5", "perimeter": [0, 5, 4]},
-
     # 4*4 grids
     "S1":  {"name": "□ 1-2-8-7",    "perimeter": [1,  2,  8,  7]},
     "S2":  {"name": "□ 2-3-9-8",    "perimeter": [2,  3,  9,  8]},
@@ -610,7 +609,7 @@ def evaluate(game: "Game", perspective: PieceType):
         if game.board.get_value(node) == "T":
             for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items():
                 if game.board.is_empty(landing):
-                    score += 30  # open corridor
+                    score += 30
                 if (game.board.get_value(mid_node) == "G"
                         and game.board.is_empty(landing)):
                     score += 300
