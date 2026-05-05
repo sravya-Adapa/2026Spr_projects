@@ -72,3 +72,5 @@ The AI uses a recursive negamax-style algorithm.
 
 
 ## Profiling
+<img width="1275" height="585" alt="Screenshot 2026-05-05 at 2 15 22 PM" src="https://github.com/user-attachments/assets/aaae703b-18ae-4e97-89b3-a07f88aa53a8" />
+
