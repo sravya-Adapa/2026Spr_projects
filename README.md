@@ -60,20 +60,12 @@ The AI uses a recursive negamax-style algorithm.
 #### Complexity:
 
 
-## Performance Characteristics
+## Results
+
+### Game type: Original Depth: 3 ( for both)
+<img width="232" height="122" alt="Screenshot 2026-05-05 at 1 39 33 PM" src="https://github.com/user-attachments/assets/a4ab883e-f829-49c6-865e-152de8b94188" />
 
 
-## Performance Measurement
-
-### Method
-
-We simulate multiple AI vs AI games and measure:
-
-- Execution time
-- Average game length
-- Win distribution
-
-### Sample Results
 
 
 ## Profiling
