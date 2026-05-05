@@ -52,10 +52,9 @@ The heuristic function evaluates how good a game state is.
 - Capture opportunities
 
 #### Complexity:
-
-
+<img width="625" height="588" alt="Screenshot 2026-05-05 at 1 31 11 PM" src="https://github.com/user-attachments/assets/7625d722-96ff-4ecd-acd5-0091fbff38bb" />
+The overall complexity of evaluate function can be treated as O(n)
 ### 4. Negamax with Alpha-Beta Pruning
-
 The AI uses a recursive negamax-style algorithm.
 
 #### Complexity:
