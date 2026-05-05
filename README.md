@@ -64,6 +64,9 @@ The AI uses a recursive negamax-style algorithm.
 
 ### Game type: Original Depth: 3 ( for both)
 <img width="232" height="122" alt="Screenshot 2026-05-05 at 1 39 33 PM" src="https://github.com/user-attachments/assets/a4ab883e-f829-49c6-865e-152de8b94188" />
+## Game type: Original Depth: Tiger - 3, Goat - 4
+<img width="216" height="98" alt="Screenshot 2026-05-05 at 1 46 08 PM" src="https://github.com/user-attachments/assets/4801eb66-203e-40fb-9997-313ae3aa3f0e" />
+
 
 
 
