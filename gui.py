@@ -1,3 +1,9 @@
+"""
+This file is for Game GUI. It has 2 modes original version and Rotation version.
+It has 2 types of players AI and human. AI is AIPlayer in will use the GoatsandTigers
+I have used AI(ChatGpt) to implement GUI.
+"""
+
 import tkinter as tk
 from tkinter import messagebox
 

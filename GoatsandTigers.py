@@ -2,6 +2,8 @@
 Goats and Tigers
 Author: Sravya Adapa (nadapa2)
 This is Goats and Tigers game engine.
+Note:
+    I used AI( Claude) to implement my ideas in some places especially with syntax, error handling and optimizing the code.
 """
 
 import networkx as nx
@@ -10,8 +12,6 @@ from enum import Enum
 import copy
 from collections import deque
 import random
-
-from sympy import capture
 
 # These are helpful to detect any repeated moves in the game
 MAX_CYCLE_LEN  = 4
@@ -93,12 +93,12 @@ def build_jump_table():
         [4, 10, 16, 21],
         [5, 11, 17, 22],
         [6, 12, 18],
-        [1, 2, 0],
+        # [1, 2, 0],
         [0, 2, 8, 14, 19],
         [0, 3, 9, 15, 20],
         [0, 4, 10, 16, 21],
         [0, 5, 11, 17, 22],
-        [6, 5, 0],
+        # [6, 5, 0],
     ]
     _, edges = original_layout()
     adj = {}
@@ -378,7 +378,10 @@ class Game():
             if zone_key == self.last_rotated_zone:
                 return False
             grid = ROTATION_ZONES[zone_key]["perimeter"]
-            return any(self.board.get_value(n) == piece_type.value for n in grid) #O(k)
+            for n in grid:
+                if self.board.get_value(n) == piece_type.value:
+                    return True
+            # return any(self.board.get_value(n) == piece_type.value for n in grid) #O(k)
         return False
 
     def is_valid_tiger_jump(self, source, destination):
@@ -426,6 +429,7 @@ class Game():
             _, zone_key, clockwise = move
             self.apply_rotation(zone_key, clockwise)
             self.last_rotated_zone = zone_key
+            self.record_move(move)
             return
         self.last_rotated_zone = None
 
@@ -586,28 +590,28 @@ def evaluate(game: "Game", perspective: PieceType):
     It evaluates each move from all possible moves based on the given heuristics and piece type.
     """
     # Game over scenario for goats ( when min of 5 goats captured)
-    if game.goats_captured >= 5:
+    if game.goats_captured >= 5: # O(1)
         return 10000 if perspective == PieceType.TIGER else -10000
     # a draw scenario
-    if game.is_draw():
+    if game.is_draw(): # O(k) K = cycle len
         return -500
     # game over scenario for tigers ( when all the tigers are blocked)
-    if game.is_tiger_blocked():
+    if game.is_tiger_blocked(): # O(n) n = number of nodes on board
         return 10000 if perspective == PieceType.GOAT else -10000
 
     # a positive incentive when goats are captured
     score = game.goats_captured * 2000
-    score += len(get_all_moves(game, PieceType.TIGER)) * 10
-    score -= len(get_all_moves(game, PieceType.GOAT))  * 5
+    score += len(get_all_moves(game, PieceType.TIGER)) * 10 # O(get_all_moves) can say it O(n)
+    score -= len(get_all_moves(game, PieceType.GOAT))  * 5 # # O(get_all_moves) can say it O(n)
 
     if game.tigers_blocked == 1:
         score -= 100
     elif game.tigers_blocked == 2:
         score -= 200
 
-    for node in game.board.G.nodes:
+    for node in game.board.G.nodes:  #O(n) n = number of nodes
         if game.board.get_value(node) == "T":
-            for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items():
+            for landing, mid_node in VALID_JUMP_LANDINGS.get(node, {}).items(): #O(k) k = number of valid jumps
                 if game.board.is_empty(landing):
                     score += 30
                 if (game.board.get_value(mid_node) == "G"
@@ -616,26 +620,102 @@ def evaluate(game: "Game", perspective: PieceType):
     if perspective == PieceType.GOAT:
         score = -score
     return score
+def apply_move_inplace(game: "Game", move, piece_type: PieceType):
+    undo = {
+        "move":              move,
+        "piece_type":        piece_type,
+        "last_rotated_zone": game.last_rotated_zone,
+        "goats_to_place":    game.goats_to_place,
+        "goats_captured":    game.goats_captured,
+        "tigers_blocked":    game.tigers_blocked,
+        "board_changes":     [],
+        "history_snapshots": [
+            list(game._player_history[0]),
+            list(game._player_history[1]),
+        ],
+    }
+
+    if move[0] == "place":
+        _, node = move
+        undo["board_changes"].append((node, game.board.get_value(node)))
+        game.board.set_value(node, piece_type.value)
+        game.goats_to_place -= 1
+        game._player_history[0].clear()
+        game._player_history[1].clear()
+
+    elif move[0] == "move":
+        _, src, dst = move
+        is_jump = (
+            piece_type == PieceType.TIGER
+            and dst not in game.board.get_neighbors(src)
+        )
+        if is_jump:
+            mid = VALID_JUMP_LANDINGS[src][dst]
+            undo["board_changes"].append((mid, game.board.get_value(mid)))
+            game.board.set_value(mid, None)
+            game.goats_captured += 1
+            game._player_history[0].clear()
+            game._player_history[1].clear()
+        else:
+            game._player_history[game.index].append(move)
+
+        undo["board_changes"].append((src, game.board.get_value(src)))
+        game.board.set_value(src, None)
+        undo["board_changes"].append((dst, game.board.get_value(dst)))
+        game.board.set_value(dst, piece_type.value)
+        game.last_rotated_zone = None
+
+    elif move[0] == "rotate":
+        _, zone_key, clockwise = move
+        ring = ROTATION_ZONES[zone_key]["perimeter"]
+        values = [game.board.get_value(n) for n in ring]
+        for node, val in zip(ring, values):
+            undo["board_changes"].append((node, val))
+        rotated = ([values[-1]] + values[:-1]) if clockwise else (values[1:] + [values[0]])
+        for node, val in zip(ring, rotated):
+            game.board.set_value(node, val)
+        game.last_rotated_zone = zone_key
+        game._player_history[game.index].append(move)
+
+    return undo
 
 
-def minimax(game: "Game", depth: int, alpha: int, beta: int,
-            perspective: PieceType):
+def undo_move_inplace(game: "Game", undo):
     """
-    Minimax algorithm.
+    This function undoes the moves made by apply_move_inplace
+    """
+    for node, old_val in reversed(undo["board_changes"]):
+        game.board.set_value(node, old_val)
+
+    game.goats_to_place    = undo["goats_to_place"]
+    game.goats_captured    = undo["goats_captured"]
+    game.tigers_blocked    = undo["tigers_blocked"]
+    game.last_rotated_zone = undo["last_rotated_zone"]
+
+    game._player_history[0] = deque(undo["history_snapshots"][0], maxlen=HISTORY_MAXLEN)
+    game._player_history[1] = deque(undo["history_snapshots"][1], maxlen=HISTORY_MAXLEN)
+
+def minimax(game: "Game", depth: int, alpha: int, beta: int,perspective: PieceType):
+    """
+    Negamax function for AI Player.
     """
     if depth == 0 or game.is_game_over():
         return evaluate(game, perspective), None
+
     moves = get_all_moves(game, perspective)
     if not moves:
         return evaluate(game, perspective), None
-    opponent = PieceType.GOAT if perspective == PieceType.TIGER else PieceType.TIGER
+
+    opponent   = PieceType.GOAT if perspective == PieceType.TIGER else PieceType.TIGER
     best_score = float("-inf")
-    best_moves =  []
+    best_moves = []
+
     for move in moves:
-        sim = game.clone()
-        sim.apply_move(move, perspective)
-        score, _ = minimax(sim, depth - 1, -beta, -alpha, opponent)
+        undo = apply_move_inplace(game, move, perspective)       # ← mutate
+        score, _ = minimax(game, depth - 1, -beta, -alpha, opponent)
         score = -score
+        undo_move_inplace(game, undo)                            # ← restore
+
         if score > best_score:
             best_score = score
             best_moves = [move]
@@ -645,6 +725,7 @@ def minimax(game: "Game", depth: int, alpha: int, beta: int,
         alpha = max(alpha, best_score)
         if alpha >= beta:
             break
+
     return best_score, random.choice(best_moves)
 
 def simulate_games(num_games=50):
@@ -656,7 +737,7 @@ def simulate_games(num_games=50):
         game = Game(game_type="original")
         game.players = [
             AIPlayer("Tiger AI", PieceType.TIGER, depth=3),
-            AIPlayer("Goat AI", PieceType.GOAT, depth=3),
+            AIPlayer("Goat AI", PieceType.GOAT, depth=4),
         ]
         turns = 0
         while not game.is_game_over():
@@ -683,7 +764,4 @@ def simulate_games(num_games=50):
 
 
 if __name__ == '__main__':
-    #game = Game(game_type="original")
-    # game = Game(game_type="rotation")
-    # game.game()
     simulate_games(1)
