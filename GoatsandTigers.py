@@ -576,11 +576,12 @@ def get_all_moves(game: "Game", piece_type: PieceType):
     if piece_type == PieceType.TIGER and capture_moves:
         return capture_moves
     if game.game_type == "rotation" and game.goats_to_place == 0:
-        for zone_key in ROTATION_ZONES: #O(k) rotation zones are constant
+        for zone_key, zone in ROTATION_ZONES.items():
             if zone_key == game.last_rotated_zone:
                 continue
-            moves.append(("rotate", zone_key, True))
-            moves.append(("rotate", zone_key, False))
+            if any(game.board.get_value(n) == piece_type.value for n in zone["perimeter"]):
+                moves.append(("rotate", zone_key, True))
+                moves.append(("rotate", zone_key, False))
     return moves
 
 
@@ -736,8 +737,8 @@ def simulate_games(num_games=50):
     for i in range(num_games):
         game = Game(game_type="original")
         game.players = [
-            AIPlayer("Tiger AI", PieceType.TIGER, depth=3),
-            AIPlayer("Goat AI", PieceType.GOAT, depth=4),
+            AIPlayer("Tiger AI", PieceType.TIGER, depth=4),
+            AIPlayer("Goat AI", PieceType.GOAT, depth=3),
         ]
         turns = 0
         while not game.is_game_over():
@@ -764,4 +765,4 @@ def simulate_games(num_games=50):
 
 
 if __name__ == '__main__':
-    simulate_games(1)
+    simulate_games(20)
