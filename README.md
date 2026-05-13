@@ -62,15 +62,19 @@ The AI uses a recursive negamax-style algorithm.
 
 ## Results
 
-## Game type: Original Depth: 3 ( for both)
+### 1. Game type: Original Depth: 3 ( for both)
 <img width="232" height="122" alt="Screenshot 2026-05-05 at 1 39 33 PM" src="https://github.com/user-attachments/assets/a4ab883e-f829-49c6-865e-152de8b94188" />
-## Game type: Original Depth: Tiger - 3, Goat - 4
+
+### 2. Game type: Original Depth: Tiger - 3, Goat - 4
 <img width="216" height="98" alt="Screenshot 2026-05-05 at 1 46 08 PM" src="https://github.com/user-attachments/assets/4801eb66-203e-40fb-9997-313ae3aa3f0e" />
-## Game type: Rotation Depth: 3 ( for both)
+
+### 3. Game type: Rotation Depth: 3 ( for both)
 <img width="286" height="140" alt="Screenshot 2026-05-13 at 2 38 50 AM" src="https://github.com/user-attachments/assets/d8f70169-5d10-4779-bc68-b38b8eb47da2" />
-## Game type: Rotation Depth: Tiger - 3, Goat - 4
+
+### 4. Game type: Rotation Depth: Tiger - 3, Goat - 4
 <img width="292" height="139" alt="Screenshot 2026-05-13 at 2 39 40 AM" src="https://github.com/user-attachments/assets/e9647ea3-2085-47c9-9089-52de043e343d" />
-## Game type: Rotation Depth: Tiger - 4, Goat - 3
+
+### 5. Game type: Rotation Depth: Tiger - 4, Goat - 3
 <img width="294" height="142" alt="Screenshot 2026-05-13 at 2 41 23 AM" src="https://github.com/user-attachments/assets/fd07da3f-f2b7-4aec-9c63-4a02e49f5c95" />
 
 
